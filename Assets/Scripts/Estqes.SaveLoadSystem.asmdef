@@ -1,9 +1,7 @@
 {
     "name": "Estqes.SaveLoadSystem",
     "rootNamespace": "",
-    "references": [
-        ""
-    ],
+    "references": [],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
