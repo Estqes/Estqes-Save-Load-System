@@ -1,6 +1,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -22,7 +23,12 @@ namespace Estqes.SaveLoadSystem
 
         private JsonSerializer _serializer;
         private SaveTypeRegistry _registry;
-        private static readonly Dictionary<Type, MemberInfo[]> _membersCache = new();
+        private static readonly Dictionary<Type, MemberInfo[]> _saveCache = new();
+        private static readonly Dictionary<Type, Loader[]> _loadersCache = new();
+        public Action OnLoadStart { get; set; }
+        public Action OnLoadEnd { get; set; }
+        public Action OnSaveStart { get; set; }
+        public Action OnSaveEnd { get; set; }
 
         public virtual void Init()
         {
@@ -30,12 +36,6 @@ namespace Estqes.SaveLoadSystem
 
             Instance = this;
 
-            var settings = new JsonSerializerSettings()
-            {
-                ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-                TypeNameHandling = TypeNameHandling.Auto,
-                Formatting = Formatting.Indented,
-            };
 
             _serializer = JsonSerializer.Create(SerializerSettings);
 
@@ -61,36 +61,44 @@ namespace Estqes.SaveLoadSystem
 
         public void Save()
         {
+            OnSaveStart?.Invoke();
             var json = Serialize();
             File.WriteAllText(SavePath, json);
+            OnSaveEnd?.Invoke();
         }
 
         public void SaveEntity(ISaveableEntity entity, SaveData saveData)
         {
             var type = entity.GetType();
-            var id = _registry.GetId(entity.GetType());
+            var id = _registry.GetIdEntity(entity.GetType());
             var entityData = new EntityData()
             {
                 Data = new(),
-                Id = entity.Id,
-                Type = id,
+                id = entity.Id,
+                type = id,
             };
 
-            if(!_membersCache.TryGetValue(type, out var info))
-            {
-                info = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                    .Where(x => x.IsDefined(typeof(SaveAttribute), false))
-                    .ToArray();
-                _membersCache.Add(type, info);
-            }
+            var saveMembers = GetSaveMembers(type);
 
-            foreach (var member in info)
+            foreach (var member in saveMembers)
             {
                 object memberValue = GetMemberValue(member, entity);
                 string memberName = member.Name;
                 JToken token;
+                
+                if(memberValue == null)
+                {
+                    token = JValue.CreateNull();
+                }
+                else if(memberValue is IEnumerable collection && memberValue is not string)
+                {
+                    token = JToken.FromObject(collection, _serializer);
+                }
+                else
+                {
+                    token = JToken.FromObject(memberValue, _serializer);
+                }
 
-                token = JToken.FromObject(memberValue, _serializer);
 
                 entityData.Data.Add(memberName, token);
             }
@@ -99,6 +107,7 @@ namespace Estqes.SaveLoadSystem
 
         public void Load()
         {
+            OnLoadStart?.Invoke();
             string json = File.ReadAllText(SavePath);
             var saveData = JsonConvert.DeserializeObject<SaveData>(json, SerializerSettings);
             AllSaveableEntity.Clear();
@@ -114,24 +123,102 @@ namespace Estqes.SaveLoadSystem
                 return;
             }
 
-            foreach (var item in sortedEntities)
+            foreach (var entityData in sortedEntities)
             {
-                var type = _registry.GetType(item.Type);
-                if(type.IsAssignableFrom(typeof(MonoBehaviour)))
+                var type = _registry.GetTypeEntity(entityData.type);
+                
+                var loader = FindLoader(entityData);
+                if(loader == null)
                 {
-                    Debug.Log("add");
+                    Debug.LogWarning($"For object {entityData.id}, type:{type} dont find loader");
+                    continue;
                 }
-                else 
-                { 
 
+                var constructorAttribute = loader.loaderAttribute;
+                var constructor = loader.constructorInfo;
+                var constructorParams = loader.parameterInfo;
+
+                if (constructorAttribute.ParamSourceNames.Length > 0 && constructorAttribute.ParamSourceNames.Length != constructorParams.Length)
+                    throw new InvalidOperationException($"In type '{type.FullName}', mismatch between [Loader] names and parameters count.");
+
+                var args = new object[constructorParams.Length];
+
+                for (int i = 0; i < constructorParams.Length; i++)
+                {
+                    args[i] = ResolveConstructorParameter(constructorParams[i], i, entityData, loader.loaderAttribute);
                 }
+
+                var newEntity = (ISaveableEntity)constructor.Invoke(args);
+                newEntity.Id = entityData.id;
+                AllSaveableEntity.Register(newEntity);
+
+                FillProperties(entityData, newEntity, type, constructorParams);
             }
+
+            OnLoadEnd?.Invoke();
         }
+
+        private object ResolveConstructorParameter(ParameterInfo param, int paramIndex, EntityData entityData, LoaderAttribute attribute)
+        {
+            string sourceName = (attribute.ParamSourceNames?.Length > 0)
+                ? attribute.ParamSourceNames[paramIndex]
+                : param.Name;
+
+            if (entityData.Data.TryGetValue(sourceName, out var jToken) ||
+                entityData.Data.TryGetValue("_" + sourceName, out jToken))
+            {
+                return DeserializeValue(jToken, param.ParameterType);
+            }
+
+            if (sourceName.Equals(nameof(ISaveableEntity.Id), StringComparison.OrdinalIgnoreCase) && param.ParameterType == typeof(Guid))
+                return entityData.id;
+
+            throw new KeyNotFoundException($"Could not find saved value for constructor parameter '{param.Name}' (source: '{sourceName}') in type '{param.Member.DeclaringType.Name}'.");
+        }
+
+        private void FillProperties(EntityData data, object entity, Type entityType, ParameterInfo[] constructorParams)
+        {
+            var members = GetSaveMembers(entityType);
+
+            foreach (var member in members)
+            {
+                if (constructorParams.Any(x => x.Name == member.Name)) continue;
+
+                var memberType = GetMemberType(member);
+                var valueToSet = DeserializeValue(data.Data[member.Name], memberType);
+
+                if (member is FieldInfo field) field.SetValue(entity, valueToSet);
+                if (member is PropertyInfo property && property.CanWrite) property.SetValue(entity, valueToSet);
+            }
+
+        }
+        private object DeserializeValue(JToken jToken, Type targetType)
+        {
+            if (jToken == null || jToken.Type == JTokenType.Null) return null;
+            return jToken.ToObject(targetType, _serializer);
+        }
+        private Loader FindLoader(EntityData entity)
+        {
+            var type = _registry.GetTypeEntity(entity.type);
+            var loaders = GetLoaders(type);
+
+            foreach (var loader in loaders)
+            {
+                if (loader.loaderAttribute.ParamSourceNames.All(x =>
+                {
+                    return !(entity.Data[x].Type == JTokenType.Null || entity.Data[x].Type == JTokenType.Undefined);
+                    
+                })) return loader;
+            }
+
+            return null;
+        }
+
         #region Topological Sort Logic
 
         private List<EntityData> GetTopologicallySortedEntities(SaveData saveData)
         {
-            var entitiesById = saveData.Entities.ToDictionary(e => e.Id);
+            var entitiesById = saveData.Entities.ToDictionary(e => e.id);
 
             var dependencies = new Dictionary<Guid, List<Guid>>();
             var dependents = new Dictionary<Guid, List<Guid>>();
@@ -140,7 +227,7 @@ namespace Estqes.SaveLoadSystem
             // build dependecy graph
             foreach (var entityData in saveData.Entities)
             {
-                var entityId = entityData.Id;
+                var entityId = entityData.id;
                 inDegree[entityId] = 0;
                 dependencies[entityId] = new List<Guid>();
                 dependents[entityId] = new List<Guid>();
@@ -148,39 +235,32 @@ namespace Estqes.SaveLoadSystem
 
             foreach (var entityData in saveData.Entities)
             {
-                var entityId = entityData.Id;
-                var entityType = _registry.GetType(entityData.Type);
+                var entityId = entityData.id;
+                var entityType = _registry.GetTypeEntity(entityData.type);
                 Debug.Log(entityType);
 
-                if (entityType.IsSubclassOf(typeof(MonoBehaviour)))
-                {
+                var constructor = FindLoader(entityData);
+                var constructorParams = constructor.parameterInfo;
 
-                }
-                else
+                // find all dependecy in constructor or method ISaveableEntity in constructor or method
+                foreach (var param in constructor.parameterInfo)
                 {
-                    var constructor = GetSaveConstructor(entityType);
-                    var constructorParams = constructor.GetParameters();
-
-                    // find all dependecy in constructor or method IGameEnity in constructor or method
-                    foreach (var param in constructor.GetParameters())
+                    if (typeof(ISaveableEntity).IsAssignableFrom(param.ParameterType))
                     {
-                        if (typeof(ISaveableEntity).IsAssignableFrom(param.ParameterType))
+                        var paramName = GetConstructorParamSourceName(param, constructor.constructorInfo);
+                        if (entityData.Data.TryGetValue(paramName, out var jToken))
                         {
-                            var paramName = GetConstructorParamSourceName(param, constructor);
-                            if (entityData.Data.TryGetValue(paramName, out var jToken))
+                            var dependencyId = jToken.ToObject<Guid>();
+                            if (entitiesById.ContainsKey(dependencyId))
                             {
-                                var dependencyId = jToken.ToObject<Guid>();
-                                if (entitiesById.ContainsKey(dependencyId))
-                                {
-                                    //build egde entityId -> dependencyId
-                                    dependencies[entityId].Add(dependencyId);
-                                    dependents[dependencyId].Add(entityId);
-                                    inDegree[entityId]++;
-                                }
+                                //build egde entityId -> dependencyId
+                                dependencies[entityId].Add(dependencyId);
+                                dependents[dependencyId].Add(entityId);
+                                inDegree[entityId]++;
                             }
                         }
                     }
-                }      
+                }
             }
 
             //Kahn's algorithm
@@ -192,7 +272,7 @@ namespace Estqes.SaveLoadSystem
                 var currentId = queue.Dequeue();
                 sortedList.Add(entitiesById[currentId]);
 
-                // "Удаляем" ребра, идущие от текущей вершины
+
                 foreach (var dependentId in dependents[currentId])
                 {
                     inDegree[dependentId]--;
@@ -208,21 +288,16 @@ namespace Estqes.SaveLoadSystem
             {
                 // Find nodes in cylic
                 var cycleNodes = inDegree.Where(kvp => kvp.Value > 0)
-                                         .Select(kvp => Type.GetType(entitiesById[kvp.Key].Type).Name);
+                                         .Select(kvp => Type.GetType(entitiesById[kvp.Key].type).Name);
                 throw new InvalidOperationException($"Cyclic dependency detected in save data. Involved types might be: {string.Join(", ", cycleNodes)}");
             }
 
             return sortedList;
         }
 
-        private static ConstructorInfo GetSaveConstructor(Type entityType)
-        {
-            throw new NotImplementedException();
-        }
-
         private static string GetConstructorParamSourceName(ParameterInfo param, ConstructorInfo constructor)
         {
-            var attribute = constructor.GetCustomAttribute<LoadMethodAttribute>();
+            var attribute = constructor.GetCustomAttribute<LoaderAttribute>();
             if (attribute.ParamSourceNames != null && attribute.ParamSourceNames.Length > 0)
             {
                 int paramIndex = Array.IndexOf(constructor.GetParameters(), param);
@@ -233,7 +308,7 @@ namespace Estqes.SaveLoadSystem
         }
 
         #endregion
-        private static SaveTypeRegistry LoadTypesRegistry()
+        private SaveTypeRegistry LoadTypesRegistry()
         {
             var reg = AssetDatabase.LoadAssetAtPath<SaveTypeRegistry>(RegistryPath);
             if (reg == null)
@@ -242,8 +317,13 @@ namespace Estqes.SaveLoadSystem
             }
             return reg;
         }
-
-        private static object GetMemberValue(MemberInfo member, object source)
+        private static Type GetMemberType(MemberInfo member) => member switch
+        {
+            FieldInfo f => f.FieldType,
+            PropertyInfo p => p.PropertyType,
+            _ => throw new ArgumentException("Member must be a FieldInfo or PropertyInfo")
+        };
+        private object GetMemberValue(MemberInfo member, object source)
         {
             return member.MemberType switch
             {
@@ -251,6 +331,56 @@ namespace Estqes.SaveLoadSystem
                 MemberTypes.Property => ((PropertyInfo)member).GetValue(source),
                 _ => null
             };
+        }
+
+        private MemberInfo[] GetSaveMembers(Type type)
+        {
+            if (!_saveCache.TryGetValue(type, out var info))
+            {
+                info = type.GetMembers(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Where(x => x.IsDefined(typeof(SaveAttribute), false))
+                    .ToArray();
+                _saveCache.Add(type, info);
+            }
+
+            return info;
+        }
+
+        private Loader[] GetLoaders(Type type)
+        {
+            if (!_loadersCache.TryGetValue(type, out var methods))
+            {
+                var constructors =
+                type.GetConstructors(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
+                .Where(x => x.IsDefined(typeof(LoaderAttribute), false))
+                .ToArray();
+
+                var count = constructors.Length;
+                methods = new Loader[count];
+
+                for (int i = 0; i < count; i++)
+                {
+                    var item = constructors[i];
+                    var attr = item.GetCustomAttribute(typeof(LoaderAttribute));
+
+                    methods[i] = new Loader()
+                    {
+                        constructorInfo = item,
+                        loaderAttribute = attr as LoaderAttribute,
+                        parameterInfo = item.GetParameters()
+                    };
+                }
+            }
+
+            return methods;
+        }
+
+        private class Loader
+        {
+            public ConstructorInfo constructorInfo;
+            public LoaderAttribute loaderAttribute;
+            public ParameterInfo[] parameterInfo;
+
         }
     }
 }

@@ -12,106 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bc5d684404c403846b13ee30657899e1, type: 3}
   m_Name: SaveTypeRegistry
   m_EditorClassIdentifier: 
-  <Mappings>k__BackingField:
+  <EntityMappings>k__BackingField:
   - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
     shortId: test_entity
+  - fullTypeName: Inventory, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    shortId: inventory
   - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
     shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
+  - fullTypeName: Inventory, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    shortId: inventory
+  <ContentMappings>k__BackingField: []

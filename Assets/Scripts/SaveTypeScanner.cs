@@ -20,33 +20,38 @@ public class SaveTypeScanner
         var registry = LoadOrCreateRegistry();
         bool dirty = false;
 
-        var allSaveableTypes = AppDomain.CurrentDomain.GetAssemblies()
-            .SelectMany(a => a.GetTypes())
-            .Where(t => t.IsDefined(typeof(EntityTypeAttribute), false) && !t.IsAbstract)
-            .ToList();
+        var domain = AppDomain.CurrentDomain.GetAssemblies()
+            .SelectMany(a => a.GetTypes());
 
-        HashSet<string> usedIds = new HashSet<string>(registry.Mappings.Select(m => m.shortId));
+        var allSaveableTypes = domain
+            .Where(t => t.IsDefined(typeof(EntityTypeAttribute), false) && !t.IsAbstract);
+
+        var allContentTypes = domain.Where(t => t.GetInterface(nameof(IContentEntity)) != null);
+
+        HashSet<string> usedIds = new HashSet<string>(registry.EntityMappings.Select(m => m.shortId));
 
         foreach (var type in allSaveableTypes)
         {
-            var existingMap = registry.Mappings.Find(m => m.fullTypeName == type.FullName);
+            var existingMap = registry.EntityMappings.Find(m => m.fullTypeName == type.AssemblyQualifiedName);
+            if (existingMap != null) continue;
 
+            var attribute = type.GetCustomAttribute<EntityTypeAttribute>();
+            string newId = attribute.TypeName;
 
-            if (existingMap == null)
+            registry.EntityMappings.Add(new SaveTypeRegistry.TypeMapping
             {
-                var attribute = type.GetCustomAttribute<EntityTypeAttribute>();            
-                string newId = attribute.TypeName;
+                fullTypeName = type.AssemblyQualifiedName,
+                shortId = attribute.TypeName
+            });
 
-                registry.Mappings.Add(new SaveTypeRegistry.TypeMapping
-                {
-                    fullTypeName = type.AssemblyQualifiedName,
-                    shortId = attribute.TypeName
-                });
+            usedIds.Add(newId);
+            dirty = true;
+        }
 
-                usedIds.Add(newId);
-                dirty = true;
-
-            }
+        foreach (var type in allContentTypes)
+        {
+            var existingMap = registry.ContentMappings.Find(m => m.fullTypeName == type.AssemblyQualifiedName);
+            if (existingMap != null) continue;
         }
 
         if (dirty)
