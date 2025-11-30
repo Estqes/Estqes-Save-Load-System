@@ -7,21 +7,19 @@ namespace Estqes.SaveLoadSystem
     [CreateAssetMenu(menuName = "Estqes.SaveLoadSystem/Create SaveTypeRegistry")]
     public class SaveTypeRegistry : ScriptableObject
     {
-        [field:SerializeField] public List<TypeMapping> EntityMappings { get; set; }
+        [field: SerializeField] public List<TypeMapping> EntityMappings { get; set; } = new();
         private Dictionary<string, Type> _idToTypeEntity;
         private Dictionary<Type, string> _typeToIdEntity;
 
-        [field: SerializeField] public List<TypeMapping> ContentMappings { get; set; }
-        private Dictionary<string, Type> _idToTypeContent;
-        private Dictionary<Type, string> _typeToIdContent;
+        [field: SerializeField] public List<IContentEntity> ContentMappings { get; set; } = new();
+        private Dictionary<string, IContentEntity> _idToContent;
 
         public void Initialize()
         {
             _idToTypeEntity = new Dictionary<string, Type>();
             _typeToIdEntity = new Dictionary<Type, string>();
 
-            _idToTypeContent = new Dictionary<string, Type>();
-            _typeToIdContent = new Dictionary<Type, string>();
+            _idToContent = new Dictionary<string, IContentEntity>();
 
             foreach (var map in EntityMappings)
             {
@@ -35,12 +33,7 @@ namespace Estqes.SaveLoadSystem
 
             foreach (var map in ContentMappings)
             {
-                var type = Type.GetType(map.fullTypeName);
-                if (type != null)
-                {
-                    _idToTypeContent[map.shortId] = type;
-                    _typeToIdContent[type] = map.shortId;
-                }
+                _idToContent[map.Tag] = map;
             }
         }
 
@@ -56,11 +49,23 @@ namespace Estqes.SaveLoadSystem
             return _idToTypeEntity.TryGetValue(id, out var type) ? type : null;
         }
 
+        public IContentEntity GetContentEntity(string tag)
+        {
+            return _idToContent[tag];
+        }
+
         [Serializable]
         public class TypeMapping
         {
             public string fullTypeName;
             public string shortId;
+        }
+
+        [Serializable]
+        public class ContentMapping
+        {
+            public string shortId;
+            public IContentEntity content;
         }
     }
 }

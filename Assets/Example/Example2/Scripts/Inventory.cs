@@ -1,8 +1,32 @@
 using Estqes.SaveLoadSystem;
 using Newtonsoft.Json;
 using NUnit.Framework.Interfaces;
+using NUnit.Framework.Internal;
 using System;
 using UnityEngine;
+
+[EntityType("TestA")]
+public class TestA
+{
+    [Save] public int a;
+    [Save] public int b;
+    [Save] public int c;
+    [Save] public int d;
+    [Save] public TestB testB;
+
+    public TestA()
+    {
+        testB = new TestB();
+    }
+}
+[EntityType("TestB")]
+public class TestB
+{
+    [Save] public int a;
+    public int b;
+    public int c;
+    public int d;
+}
 
 [EntityType("inventory")]
 public class Inventory : ISaveableEntity
@@ -11,6 +35,11 @@ public class Inventory : ISaveableEntity
     public Guid Id { get; set; }
 
     public event Action OnInventoryUpdated;
+    [Loader()]
+    public Inventory()
+    {
+
+    }
 
     public Inventory(int size)
     {
@@ -100,16 +129,19 @@ public class Inventory : ISaveableEntity
 }
 
 [Serializable]
+[EntityType("inventorySlot")]
 public class InventorySlot 
 {
-    [JsonProperty("Item")] public ItemData item;
-    [JsonProperty("Count")] public int count;
+    [JsonProperty("Item")][Save] public ItemData item;
+    [JsonProperty("Count")][Save] public int count;
     [JsonIgnore] public bool IsEmpty => item == null;
 
     public InventorySlot()
     {
         item = null;
         count = 0;
+
+        //AllSaveableEntity.Register(this);
     }
 
     public void Clear()

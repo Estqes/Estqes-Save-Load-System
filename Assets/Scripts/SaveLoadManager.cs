@@ -1,3 +1,4 @@
+using Codice.CM.Client.Differences.Graphic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -9,6 +10,7 @@ using System.Reflection;
 using Unity.VisualScripting.YamlDotNet.Serialization;
 using UnityEditor;
 using UnityEngine;
+using static UnityEngine.EventSystems.EventTrigger;
 
 namespace Estqes.SaveLoadSystem
 {
@@ -43,6 +45,48 @@ namespace Estqes.SaveLoadSystem
 
             _registry = LoadTypesRegistry();
         }
+        private JToken SerializeValue(object value, SaveData saveData)
+        {
+            if (value == null)
+            {
+                return JValue.CreateNull();
+            }
+
+            var type = value.GetType();
+
+
+            if (value is IContentEntity content)
+            {
+                return JToken.FromObject(content.Tag);
+            }
+
+            else if (value is IEnumerable collection && value is not string)
+            {
+                var jArray = new JArray();
+                foreach (var item in collection)
+                {
+                    jArray.Add(SerializeValue(item, saveData));
+                }
+                return jArray;
+            }
+
+            else if (type.IsDefined(typeof(EntityTypeAttribute), false))
+            {
+                var id = _registry.GetIdEntity(type);
+                if (string.IsNullOrEmpty(id)) id = type.Name;
+
+                var nestedData = new SaveableData()
+                {
+                    type = id
+                };
+
+                SaveObject("", value, saveData, nestedData);
+
+                return JToken.FromObject(nestedData);
+            }
+
+            return JToken.FromObject(value, _serializer);
+        }
 
         public string Serialize()
         {
@@ -67,6 +111,22 @@ namespace Estqes.SaveLoadSystem
             OnSaveEnd?.Invoke();
         }
 
+        private void SaveObject(string propertyName, object obj, SaveData saveData, SaveableData saveableData)
+        {
+            var type = obj.GetType();
+            var saveMembers = GetSaveMembers(type);
+
+            foreach (var member in saveMembers)
+            {
+                object memberValue = GetMemberValue(member, obj);
+                string memberName = member.Name;
+
+                JToken token = SerializeValue(memberValue, saveData);
+
+                saveableData.Data.Add(memberName, token);
+            }
+        }
+
         public void SaveEntity(ISaveableEntity entity, SaveData saveData)
         {
             var type = entity.GetType();
@@ -78,30 +138,8 @@ namespace Estqes.SaveLoadSystem
                 type = id,
             };
 
-            var saveMembers = GetSaveMembers(type);
+            SaveObject("", entity, saveData, entityData);
 
-            foreach (var member in saveMembers)
-            {
-                object memberValue = GetMemberValue(member, entity);
-                string memberName = member.Name;
-                JToken token;
-                
-                if(memberValue == null)
-                {
-                    token = JValue.CreateNull();
-                }
-                else if(memberValue is IEnumerable collection && memberValue is not string)
-                {
-                    token = JToken.FromObject(collection, _serializer);
-                }
-                else
-                {
-                    token = JToken.FromObject(memberValue, _serializer);
-                }
-
-
-                entityData.Data.Add(memberName, token);
-            }
             saveData.Entities.Add(entityData);
         }
 
@@ -152,7 +190,7 @@ namespace Estqes.SaveLoadSystem
                 newEntity.Id = entityData.id;
                 AllSaveableEntity.Register(newEntity);
 
-                FillProperties(entityData, newEntity, type, constructorParams);
+                FillProperties(entityData.Data, newEntity, type, constructorParams);
             }
 
             OnLoadEnd?.Invoke();
@@ -176,27 +214,86 @@ namespace Estqes.SaveLoadSystem
             throw new KeyNotFoundException($"Could not find saved value for constructor parameter '{param.Name}' (source: '{sourceName}') in type '{param.Member.DeclaringType.Name}'.");
         }
 
-        private void FillProperties(EntityData data, object entity, Type entityType, ParameterInfo[] constructorParams)
+        private void FillProperties(Dictionary<string, JToken> dataDict, object entity, Type entityType, ParameterInfo[] constructorParams = null)
         {
             var members = GetSaveMembers(entityType);
 
             foreach (var member in members)
             {
-                if (constructorParams.Any(x => x.Name == member.Name)) continue;
+                if (constructorParams != null && constructorParams.Any(x => x.Name == member.Name)) continue;
+
+                if (!dataDict.TryGetValue(member.Name, out var token)) continue;
 
                 var memberType = GetMemberType(member);
-                var valueToSet = DeserializeValue(data.Data[member.Name], memberType);
+
+                var valueToSet = DeserializeValue(token, memberType);
 
                 if (member is FieldInfo field) field.SetValue(entity, valueToSet);
                 if (member is PropertyInfo property && property.CanWrite) property.SetValue(entity, valueToSet);
             }
-
         }
+
         private object DeserializeValue(JToken jToken, Type targetType)
         {
             if (jToken == null || jToken.Type == JTokenType.Null) return null;
+
+            if (typeof(IContentEntity).IsAssignableFrom(targetType) && jToken.Type == JTokenType.String)
+            {
+                string tag = jToken.ToString();
+                // Берем объект из реестра
+                return _registry.GetContentEntity(tag);
+            }
+
+            if (jToken is JObject jObj && jObj.ContainsKey("type") && jObj.ContainsKey("Data"))
+            {
+                string typeName = jObj["type"].ToString();
+                Type actualType = _registry.GetTypeEntity(typeName) ?? targetType;
+
+                if (actualType != null)
+                {
+                    object instance = Activator.CreateInstance(actualType);
+                    var dataDict = jObj["Data"].ToObject<Dictionary<string, JToken>>(_serializer);
+
+                    FillProperties(dataDict, instance, actualType);
+                    return instance;
+                }
+            }
+
+            if (jToken is JArray jArray && typeof(IEnumerable).IsAssignableFrom(targetType) && targetType != typeof(string))
+            {
+                Type elementType = null;
+                if (targetType.IsArray)
+                {
+                    elementType = targetType.GetElementType();
+                }
+                else if (targetType.IsGenericType)
+                {
+                    elementType = targetType.GetGenericArguments()[0];
+                }
+
+                if (elementType != null)
+                {
+                    var list = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(elementType));
+
+                    foreach (var childToken in jArray)
+                    {
+                        list.Add(DeserializeValue(childToken, elementType));
+                    }
+
+                    if (targetType.IsArray)
+                    {
+                        var array = Array.CreateInstance(elementType, list.Count);
+                        list.CopyTo(array, 0);
+                        return array;
+                    }
+                    return list;
+                }
+            }
+
             return jToken.ToObject(targetType, _serializer);
         }
+
+
         private Loader FindLoader(EntityData entity)
         {
             var type = _registry.GetTypeEntity(entity.type);

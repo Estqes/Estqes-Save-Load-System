@@ -18,9 +18,10 @@ MonoBehaviour:
     shortId: test_entity
   - fullTypeName: Inventory, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     shortId: inventory
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+  - fullTypeName: InventorySlot, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: Inventory, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-    shortId: inventory
-  <ContentMappings>k__BackingField: []
+    shortId: inventorySlot
+  - fullTypeName: TestA, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    shortId: TestA
+  - fullTypeName: TestB, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
+    shortId: TestB

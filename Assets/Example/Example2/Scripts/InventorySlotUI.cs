@@ -1,9 +1,10 @@
+using Estqes.SaveLoadSystem;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class InventorySlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler
+public class InventorySlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IDropHandler, IContentEntity
 {
     [Header("UI References")]
     [SerializeField] private Image iconImage;
@@ -13,6 +14,8 @@ public class InventorySlotUI : MonoBehaviour, IBeginDragHandler, IDragHandler, I
     private Inventory _inventory;
     private Canvas _parentCanvas;
     private Image _dragGhost; // Картинка, которая летает за мышкой
+
+    public string Tag => "Slot";
 
     public void Init(int index, Inventory inventory, Canvas canvas)
     {

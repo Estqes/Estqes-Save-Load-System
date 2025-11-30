@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System;
 
 public class InventoryUI : MonoBehaviour
 {
@@ -12,10 +13,16 @@ public class InventoryUI : MonoBehaviour
 
     private void Start()
     {
-        inventoryHolder.Inventory.OnInventoryUpdated += RefreshUI;
+        inventoryHolder.OnInventoryUpdated += NewInventory;
 
         InitializeSlots();
 
+        RefreshUI();
+    }
+
+    private void NewInventory()
+    {
+        inventoryHolder.Inventory.OnInventoryUpdated += RefreshUI;
         RefreshUI();
     }
 
@@ -42,7 +49,6 @@ public class InventoryUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (inventoryHolder != null && inventoryHolder.Inventory != null)
-            inventoryHolder.Inventory.OnInventoryUpdated -= RefreshUI;
+        inventoryHolder.OnInventoryUpdated -= NewInventory;
     }
 }

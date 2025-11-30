@@ -15,62 +15,89 @@ public class SaveTypeScanner
         EditorApplication.delayCall += ScanAndRegisterTypes;
     }
 
-    static void ScanAndRegisterTypes()
+    [MenuItem("Tools/SaveSystem/Force Rescan Types")]
+    public static void ScanAndRegisterTypes()
     {
         var registry = LoadOrCreateRegistry();
         bool dirty = false;
 
-        var domain = AppDomain.CurrentDomain.GetAssemblies()
+        var domainTypes = AppDomain.CurrentDomain.GetAssemblies()
             .SelectMany(a => a.GetTypes());
 
-        var allSaveableTypes = domain
+        var allSaveableTypes = domainTypes
             .Where(t => t.IsDefined(typeof(EntityTypeAttribute), false) && !t.IsAbstract);
-
-        var allContentTypes = domain.Where(t => t.GetInterface(nameof(IContentEntity)) != null);
-
-        HashSet<string> usedIds = new HashSet<string>(registry.EntityMappings.Select(m => m.shortId));
 
         foreach (var type in allSaveableTypes)
         {
+
             var existingMap = registry.EntityMappings.Find(m => m.fullTypeName == type.AssemblyQualifiedName);
             if (existingMap != null) continue;
 
             var attribute = type.GetCustomAttribute<EntityTypeAttribute>();
-            string newId = attribute.TypeName;
-
+            
             registry.EntityMappings.Add(new SaveTypeRegistry.TypeMapping
             {
                 fullTypeName = type.AssemblyQualifiedName,
                 shortId = attribute.TypeName
             });
 
-            usedIds.Add(newId);
             dirty = true;
         }
 
-        foreach (var type in allContentTypes)
-        {
-            var existingMap = registry.ContentMappings.Find(m => m.fullTypeName == type.AssemblyQualifiedName);
-            if (existingMap != null) continue;
-        }
+        LoadContent(registry);
 
         if (dirty)
         {
             EditorUtility.SetDirty(registry);
             AssetDatabase.SaveAssets();
+            Debug.Log("[SaveTypeScanner] Registry updated successfully.");
+        }
+    }
+
+    
+
+    private static void LoadContent(SaveTypeRegistry registry)
+    {
+        string[] guids = AssetDatabase.FindAssets("t:ScriptableObject t:Prefab");
+        foreach (string guid in guids)
+        {
+            string path = AssetDatabase.GUIDToAssetPath(guid);
+            UnityEngine.Object asset = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path);
+
+            if (asset == null) continue;
+
+            IContentEntity contentEntity = null;
+
+            if (asset is IContentEntity contentEntitySO)
+            {
+                contentEntity = contentEntitySO; ;
+            }
+
+            else if (asset is GameObject go)
+            {
+                contentEntity = go.GetComponentInChildren<IContentEntity>(true);
+            }
+
+            if (contentEntity == null) continue;
+            var existingMap = registry.ContentMappings.Find(m => m.Tag == contentEntity.Tag);
+            if (existingMap != null) continue;
+
+            registry.ContentMappings.Add(contentEntity);
         }
     }
 
     static SaveTypeRegistry LoadOrCreateRegistry()
     {
-        var reg = AssetDatabase.LoadAssetAtPath<SaveTypeRegistry>(SaveLoadManager.RegistryPath);
+        string path = SaveLoadManager.RegistryPath; 
+
+        var reg = AssetDatabase.LoadAssetAtPath<SaveTypeRegistry>(path);
         if (reg == null)
         {
             if (!AssetDatabase.IsValidFolder("Assets/Resources"))
                 AssetDatabase.CreateFolder("Assets", "Resources");
 
             reg = ScriptableObject.CreateInstance<SaveTypeRegistry>();
-            AssetDatabase.CreateAsset(reg, SaveLoadManager.RegistryPath);
+            AssetDatabase.CreateAsset(reg, path);
         }
         return reg;
     }
