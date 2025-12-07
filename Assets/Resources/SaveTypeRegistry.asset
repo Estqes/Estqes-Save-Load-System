@@ -25,3 +25,24 @@ MonoBehaviour:
     shortId: TestA
   - fullTypeName: TestB, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
     shortId: TestB
+  - fullTypeName: NewEntityTest, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    shortId: TestG
+  - fullTypeName: TestEntity, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    shortId: test_entity
+  - fullTypeName: TestA, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    shortId: TestA
+  - fullTypeName: TestB, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    shortId: TestB
+  - fullTypeName: NewEntityTest, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
+    shortId: TestG
+  - fullTypeName: Inventory, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0, Culture=neutral,
+      PublicKeyToken=null
+    shortId: inventory
+  - fullTypeName: InventorySlot, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0,
+      Culture=neutral, PublicKeyToken=null
+    shortId: inventorySlot

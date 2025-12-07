@@ -4,6 +4,7 @@ using NUnit.Framework.Interfaces;
 using NUnit.Framework.Internal;
 using System;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 [EntityType("TestA")]
 public class TestA
@@ -28,9 +29,25 @@ public class TestB
     public int d;
 }
 
+[EntityType("TestG")]
+public class NewEntityTest : ISaveableEntity
+{
+    public Guid Id { get; set; }
+    [Save] public float Save;
+
+    [Loader]
+    public NewEntityTest()
+    {
+        Id = Guid.NewGuid();
+        AllSaveableEntity.Register(this);
+        Save = Random.value * 100;
+    }
+}
+
 [EntityType("inventory")]
 public class Inventory : ISaveableEntity
 {
+    [Save] public NewEntityTest EntityTest { get; private set; }
     [Save] public InventorySlot[] Slots { get; private set; }
     public Guid Id { get; set; }
 
@@ -38,7 +55,7 @@ public class Inventory : ISaveableEntity
     [Loader()]
     public Inventory()
     {
-
+        Debug.Log(EntityTest.Save);
     }
 
     public Inventory(int size)
@@ -50,6 +67,8 @@ public class Inventory : ISaveableEntity
         }
 
         AllSaveableEntity.Register(this);
+
+        EntityTest = new NewEntityTest();
     }
 
     public bool AddItem(ItemData item, int amount)

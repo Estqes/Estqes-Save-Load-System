@@ -59,6 +59,11 @@ namespace Estqes.SaveLoadSystem
             {
                 return JToken.FromObject(content.Tag);
             }
+            else if(value is ISaveableEntity entity)
+            {
+                Debug.Log("Good");
+                return JToken.FromObject(entity.Id);
+            }
 
             else if (value is IEnumerable collection && value is not string)
             {
@@ -88,11 +93,10 @@ namespace Estqes.SaveLoadSystem
             return JToken.FromObject(value, _serializer);
         }
 
-        public string Serialize()
+        public string Serialize(IEnumerable<ISaveableEntity> entities)
         {
-            var enites = AllSaveableEntity.GetAll();
             var saveData = new SaveData();
-            foreach (var item in enites)
+            foreach (var item in entities)
             {
                 SaveEntity(item, saveData);
             }
@@ -105,8 +109,13 @@ namespace Estqes.SaveLoadSystem
 
         public void Save()
         {
+            Save(AllSaveableEntity.GetAll());
+        }
+
+        public void Save(IEnumerable<ISaveableEntity> entities)
+        {
             OnSaveStart?.Invoke();
-            var json = Serialize();
+            var json = Serialize(entities);
             File.WriteAllText(SavePath, json);
             OnSaveEnd?.Invoke();
         }
@@ -242,6 +251,18 @@ namespace Estqes.SaveLoadSystem
                 string tag = jToken.ToString();
                 // Берем объект из реестра
                 return _registry.GetContentEntity(tag);
+            }
+            if (typeof(ISaveableEntity).IsAssignableFrom(targetType))
+            {
+                if (jToken.Type == JTokenType.String && Guid.TryParse(jToken.ToString(), out Guid refId))
+                {
+                    var existingEntity = AllSaveableEntity.GetEnity(refId);
+                    if (existingEntity == null)
+                    {
+                        Debug.LogWarning($"Entity with ID {refId} not found for field of type {targetType.Name}. It might not be loaded yet or was destroyed.");
+                    }
+                    return existingEntity;
+                }
             }
 
             if (jToken is JObject jObj && jObj.ContainsKey("type") && jObj.ContainsKey("Data"))

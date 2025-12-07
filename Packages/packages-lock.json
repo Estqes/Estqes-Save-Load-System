@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.estqes.saveloadsystem": {
+      "version": "file:Estqes-Save-Load-System",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.8",
       "depth": 0,

@@ -1,0 +1,14 @@
+{
+  "name": "com.estqes.saveloadsystem",
+  "displayName": "Estqes Save Load System",
+  "version": "1.0.0",
+  "unity": "2021.3",
+  "description": "A flexible save/load system based on Attributes and JSON serialization.",
+  "author": {
+    "name": "Estqes",
+    "email": "your_email@example.com"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
