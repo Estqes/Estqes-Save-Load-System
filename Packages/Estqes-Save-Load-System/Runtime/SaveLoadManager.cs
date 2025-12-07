@@ -1,4 +1,3 @@
-using Codice.CM.Client.Differences.Graphic;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -7,10 +6,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using Unity.VisualScripting.YamlDotNet.Serialization;
-using UnityEditor;
 using UnityEngine;
-using static UnityEngine.EventSystems.EventTrigger;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Estqes.SaveLoadSystem
 {
@@ -428,13 +428,18 @@ namespace Estqes.SaveLoadSystem
         #endregion
         private SaveTypeRegistry LoadTypesRegistry()
         {
-            var reg = AssetDatabase.LoadAssetAtPath<SaveTypeRegistry>(RegistryPath);
+            const string registryFileName = "SaveTypeRegistry";
+
+            var reg = Resources.Load<SaveTypeRegistry>(registryFileName);
+
             if (reg == null)
             {
-                throw new Exception($"You may not have SaveTypeRegistry in the folder {RegistryPath} . Try creating it manually: Estqes.SaveLoadSystem -> Create SaveTypeRegistry");
+                throw new Exception($"SaveTypeRegistry not found! Please create a folder named 'Resources' and put the 'SaveTypeRegistry' asset there.");
             }
+
             return reg;
         }
+
         private static Type GetMemberType(MemberInfo member) => member switch
         {
             FieldInfo f => f.FieldType,

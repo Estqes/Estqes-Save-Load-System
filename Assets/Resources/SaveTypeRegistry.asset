@@ -9,25 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bc5d684404c403846b13ee30657899e1, type: 3}
+  m_Script: {fileID: 11500000, guid: 22cf4f0bf49eeee47b6c6dda3daf4d94, type: 3}
   m_Name: SaveTypeRegistry
   m_EditorClassIdentifier: 
   <EntityMappings>k__BackingField:
-  - fullTypeName: TestEntity, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: test_entity
-  - fullTypeName: Inventory, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-    shortId: inventory
-  - fullTypeName: InventorySlot, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: inventorySlot
-  - fullTypeName: TestA, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-    shortId: TestA
-  - fullTypeName: TestB, Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null
-    shortId: TestB
-  - fullTypeName: NewEntityTest, Assembly-CSharp, Version=0.0.0.0, Culture=neutral,
-      PublicKeyToken=null
-    shortId: TestG
   - fullTypeName: TestEntity, Estqes.SaveLoadSystem.Examples, Version=0.0.0.0, Culture=neutral,
       PublicKeyToken=null
     shortId: test_entity
