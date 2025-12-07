@@ -152,10 +152,10 @@ namespace Estqes.SaveLoadSystem
             saveData.Entities.Add(entityData);
         }
 
-        public void Load()
+        public void Load(string json)
         {
             OnLoadStart?.Invoke();
-            string json = File.ReadAllText(SavePath);
+
             var saveData = JsonConvert.DeserializeObject<SaveData>(json, SerializerSettings);
             AllSaveableEntity.Clear();
 
@@ -173,9 +173,9 @@ namespace Estqes.SaveLoadSystem
             foreach (var entityData in sortedEntities)
             {
                 var type = _registry.GetTypeEntity(entityData.type);
-                
+
                 var loader = FindLoader(entityData);
-                if(loader == null)
+                if (loader == null)
                 {
                     Debug.LogWarning($"For object {entityData.id}, type:{type} dont find loader");
                     continue;
@@ -203,6 +203,12 @@ namespace Estqes.SaveLoadSystem
             }
 
             OnLoadEnd?.Invoke();
+        }
+
+        public void Load()
+        {
+            string json = File.ReadAllText(SavePath);
+            Load(json);
         }
 
         private object ResolveConstructorParameter(ParameterInfo param, int paramIndex, EntityData entityData, LoaderAttribute attribute)
