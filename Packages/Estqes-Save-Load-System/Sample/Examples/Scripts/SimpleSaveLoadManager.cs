@@ -16,7 +16,7 @@ public class SimpleSaveLoadManager : MonoBehaviour
             ? Application.persistentDataPath
             : _customPath;
 
-        Debug.Log($"[SaveSystem] Path: {Path.Combine(actualPath, _fileName)}");
+        Debug.Log($"[SaveSystem] Path: {Path.Combine(actualPath, _fileName)} ");
 
         new SaveLoadManager()
         {
