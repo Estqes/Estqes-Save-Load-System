@@ -152,12 +152,14 @@ namespace Estqes.SaveLoadSystem
             saveData.Entities.Add(entityData);
         }
 
-        public void Load(string json)
+        public List<ISaveableEntity> Load(string json, bool regiserInAllsaveable = true)
         {
             OnLoadStart?.Invoke();
 
             var saveData = JsonConvert.DeserializeObject<SaveData>(json, SerializerSettings);
             AllSaveableEntity.Clear();
+
+            var listEntites = new List<ISaveableEntity>();
 
             List<EntityData> sortedEntities;
             try
@@ -167,7 +169,7 @@ namespace Estqes.SaveLoadSystem
             catch (InvalidOperationException ex)
             {
                 Debug.LogError($"Failed to determine load order: {ex.Message}");
-                return;
+                return null;
             }
 
             foreach (var entityData in sortedEntities)
@@ -197,12 +199,15 @@ namespace Estqes.SaveLoadSystem
 
                 var newEntity = (ISaveableEntity)constructor.Invoke(args);
                 newEntity.Id = entityData.id;
-                AllSaveableEntity.Register(newEntity);
+
+                listEntites.Add(newEntity);
+                if(regiserInAllsaveable) AllSaveableEntity.Register(newEntity);
 
                 FillProperties(entityData.Data, newEntity, type, constructorParams);
             }
 
             OnLoadEnd?.Invoke();
+            return listEntites;
         }
 
         public void Load()
